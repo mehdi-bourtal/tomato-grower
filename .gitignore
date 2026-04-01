@@ -79,8 +79,8 @@ app/macos/.symlinks/
 app/macos/Flutter/ephemeral/
 app/macos/Flutter/GeneratedPluginRegistrant.swift
 
-.env
-.cursor
+app/.env
+.cursor/
 # Miscellaneous
 *.class
 *.log
