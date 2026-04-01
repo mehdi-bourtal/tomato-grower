@@ -1,5 +1,5 @@
-.env
-.cursor
+app/.env
+.cursor/
 # Miscellaneous
 *.class
 *.log
