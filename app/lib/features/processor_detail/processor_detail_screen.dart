@@ -10,6 +10,7 @@ import '../../core/utils/unit_conversion.dart';
 import '../../data/models/culture_info.dart';
 import '../../data/models/processor_info.dart';
 import '../../data/models/watering_event.dart';
+import '../../data/providers/mqtt_provider.dart';
 import '../../data/providers/supabase_provider.dart';
 import '../../shared/widgets/app_shimmer.dart';
 import '../../shared/widgets/empty_state.dart';
@@ -32,6 +33,38 @@ final _recentWateringsProvider =
   final repo = ref.watch(wateringRepositoryProvider);
   return repo.fetchRecent(procId, limit: 5);
 });
+
+Future<void> _sendWaterCommand(
+  BuildContext context,
+  WidgetRef ref,
+  String procId, {
+  int? volumeMl,
+}) async {
+  final mqtt = ref.read(mqttWateringServiceProvider);
+  if (!mqtt.isConfigured) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'HiveMQ is not configured. Add HIVEMQ_CLUSTER_URL, '
+          'HIVEMQ_USERNAME, and HIVEMQ_PASSWORD to .env.',
+        ),
+      ),
+    );
+    return;
+  }
+  try {
+    await mqtt.publishWaterCommand(procId, volumeMl: volumeMl);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Water command sent (MQTT).')),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('MQTT error: $e')),
+    );
+  }
+}
 
 class ProcessorDetailScreen extends ConsumerWidget {
   final String procId;
@@ -112,13 +145,12 @@ class ProcessorDetailScreen extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Watering coming soon!'),
+                  onPressed: () => _sendWaterCommand(
+                        context,
+                        ref,
+                        procId,
+                        volumeMl: proc.wateringVolume,
                       ),
-                    );
-                  },
                   icon: const Icon(PhosphorIconsBold.dropHalf, size: 20),
                   label: const Text('Water Now'),
                 ),

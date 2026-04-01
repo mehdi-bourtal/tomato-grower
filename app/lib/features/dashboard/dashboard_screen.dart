@@ -5,6 +5,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../data/providers/mqtt_provider.dart';
 import '../../data/providers/refresh_provider.dart';
 import '../../data/providers/supabase_provider.dart';
 import '../../shared/widgets/empty_state.dart';
@@ -205,11 +206,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           metrics: metrics,
           tomatoStatus: tomato,
           processor: processor,
-          onWaterNow: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Watering coming soon!')),
-            );
-          },
+          onWaterNow: () => _sendWaterCommand(procId),
           onViewPhoto: () => context.go('/camera'),
         );
       },
@@ -331,6 +328,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         );
       }
     });
+  }
+
+  Future<void> _sendWaterCommand(String procId) async {
+    final mqtt = ref.read(mqttWateringServiceProvider);
+    if (!mqtt.isConfigured) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'HiveMQ is not configured. Add HIVEMQ_CLUSTER_URL, '
+            'HIVEMQ_USERNAME, and HIVEMQ_PASSWORD to .env.',
+          ),
+        ),
+      );
+      return;
+    }
+    try {
+      await mqtt.publishWaterCommand(
+        procId,
+        volumeMl: ref.read(selectedProcessorProvider)?.wateringVolume,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Water command sent (MQTT).')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('MQTT error: $e')),
+      );
+    }
   }
 }
 
