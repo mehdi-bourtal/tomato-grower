@@ -45,7 +45,11 @@ Future<void> main() async {
   final notificationsEnabled =
       await BackgroundTaskService.getNotificationsEnabled();
   if (notificationsEnabled) {
-    await BackgroundTaskService.registerPeriodicTask();
+    try {
+      await BackgroundTaskService.registerPeriodicTask();
+    } catch (e, st) {
+      debugPrint('Background task registration failed: $e\n$st');
+    }
   }
 
   runApp(

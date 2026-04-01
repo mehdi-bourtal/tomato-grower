@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/theme/app_colors.dart';
@@ -7,7 +6,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../data/models/tomato_status.dart';
 import '../../../data/repositories/tomato_repository.dart';
-import '../../../shared/widgets/app_shimmer.dart';
+import '../../../shared/widgets/supabase_image.dart';
 
 class RecentPhotosRow extends StatelessWidget {
   final List<TomatoStatus> photos;
@@ -42,12 +41,9 @@ class RecentPhotosRow extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
         itemBuilder: (context, index) {
           final photo = photos[index];
-          final imageUrl = tomatoRepo.getPublicImageUrl(photo.imgSupabaseUrl);
-
           return _PhotoCard(
-            imageUrl: imageUrl,
-            date: photo.date,
-            ripeCount: photo.ripeTomatos,
+            photo: photo,
+            tomatoRepo: tomatoRepo,
           );
         },
       ),
@@ -56,14 +52,12 @@ class RecentPhotosRow extends StatelessWidget {
 }
 
 class _PhotoCard extends StatelessWidget {
-  final String? imageUrl;
-  final DateTime date;
-  final int? ripeCount;
+  final TomatoStatus photo;
+  final TomatoRepository tomatoRepo;
 
   const _PhotoCard({
-    this.imageUrl,
-    required this.date,
-    this.ripeCount,
+    required this.photo,
+    required this.tomatoRepo,
   });
 
   @override
@@ -85,26 +79,12 @@ class _PhotoCard extends StatelessWidget {
             child: SizedBox(
               height: 110,
               width: double.infinity,
-              child: imageUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => const AppShimmer(height: 110),
-                      errorWidget: (_, __, ___) => Container(
-                        color: AppColors.soil700,
-                        child: const Icon(
-                          Icons.broken_image_outlined,
-                          color: AppColors.clay,
-                        ),
-                      ),
-                    )
-                  : Container(
-                      color: AppColors.soil700,
-                      child: const Icon(
-                        Icons.image_not_supported_outlined,
-                        color: AppColors.clay,
-                      ),
-                    ),
+              child: SupabaseImage(
+                imagePath: photo.imgSupabaseUrl,
+                tomatoRepo: tomatoRepo,
+                fit: BoxFit.cover,
+                height: 110,
+              ),
             ),
           ),
           Padding(
@@ -113,7 +93,7 @@ class _PhotoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppDateUtils.formatTimestamp(date),
+                  AppDateUtils.formatTimestamp(photo.date),
                   style: AppTypography.bodySmall.copyWith(
                     color: AppColors.clay,
                   ),
@@ -123,18 +103,21 @@ class _PhotoCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       PhosphorIconsBold.orangeSlice,
                       size: 14,
                       color: AppColors.tomatoRed,
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      ripeCount != null
-                          ? '$ripeCount ripe'
-                          : '— ripe',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.cream,
+                    Expanded(
+                      child: Text(
+                        photo.ripeTomatos != null
+                            ? '${photo.ripeTomatos} ripe'
+                            : '— ripe',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.cream,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

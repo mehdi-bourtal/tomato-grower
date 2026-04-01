@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/culture_repository.dart';
 import '../repositories/processor_repository.dart';
 import '../repositories/tomato_repository.dart';
+import '../repositories/watering_repository.dart';
+import '../repositories/weather_repository.dart';
 
 final supabaseClientProvider = Provider<SupabaseClient>((ref) {
   return Supabase.instance.client;
@@ -23,4 +25,12 @@ final tomatoRepositoryProvider = Provider<TomatoRepository>((ref) {
 
 final processorRepositoryProvider = Provider<ProcessorRepository>((ref) {
   return ProcessorRepository(ref.watch(supabaseClientProvider));
+});
+
+final wateringRepositoryProvider = Provider<WateringRepository>((ref) {
+  return WateringRepository(ref.watch(supabaseClientProvider));
+});
+
+final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
+  return WeatherRepository();
 });

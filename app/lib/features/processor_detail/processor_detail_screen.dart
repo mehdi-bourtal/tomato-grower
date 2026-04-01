@@ -9,9 +9,11 @@ import '../../core/utils/app_date_utils.dart';
 import '../../core/utils/unit_conversion.dart';
 import '../../data/models/culture_info.dart';
 import '../../data/models/processor_info.dart';
+import '../../data/models/watering_event.dart';
 import '../../data/providers/supabase_provider.dart';
 import '../../shared/widgets/app_shimmer.dart';
 import '../../shared/widgets/empty_state.dart';
+import '../dashboard/widgets/watering_timeline.dart';
 
 final _processorProvider =
     FutureProvider.family<ProcessorInfo?, String>((ref, procId) async {
@@ -25,6 +27,12 @@ final _recentMetricsProvider =
   return repo.fetchRecentForProcessor(procId, limit: 5);
 });
 
+final _recentWateringsProvider =
+    FutureProvider.family<List<WateringEvent>, String>((ref, procId) async {
+  final repo = ref.watch(wateringRepositoryProvider);
+  return repo.fetchRecent(procId, limit: 5);
+});
+
 class ProcessorDetailScreen extends ConsumerWidget {
   final String procId;
 
@@ -34,6 +42,7 @@ class ProcessorDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final procAsync = ref.watch(_processorProvider(procId));
     final metricsAsync = ref.watch(_recentMetricsProvider(procId));
+    final wateringsAsync = ref.watch(_recentWateringsProvider(procId));
 
     return Scaffold(
       backgroundColor: AppColors.soil900,
@@ -52,7 +61,7 @@ class ProcessorDetailScreen extends ConsumerWidget {
       body: procAsync.when(
         data: (proc) {
           if (proc == null) {
-            return EmptyState(
+            return const EmptyState(
               icon: PhosphorIconsBold.cpu,
               title: 'Processor not found',
               subtitle: 'This processor may have been removed.',
@@ -85,6 +94,20 @@ class ProcessorDetailScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.xl),
+              wateringsAsync.when(
+                data: (waterings) => WateringTimeline(
+                  waterings: waterings,
+                  volumePerWatering: proc.wateringVolume,
+                ),
+                loading: () => const SizedBox(
+                  height: 80,
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.water),
+                  ),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
               const SizedBox(height: AppSpacing.xxxl),
               SizedBox(
                 width: double.infinity,
@@ -96,7 +119,7 @@ class ProcessorDetailScreen extends ConsumerWidget {
                       ),
                     );
                   },
-                  icon: Icon(PhosphorIconsBold.dropHalf, size: 20),
+                  icon: const Icon(PhosphorIconsBold.dropHalf, size: 20),
                   label: const Text('Water Now'),
                 ),
               ),
@@ -215,7 +238,7 @@ class ProcessorDetailScreen extends ConsumerWidget {
 
   Widget _buildMetricsList(List<CultureInfo> metrics) {
     if (metrics.isEmpty) {
-      return EmptyState(
+      return const EmptyState(
         icon: PhosphorIconsBold.thermometerSimple,
         title: 'No metrics yet',
         subtitle: 'Recent readings will appear here.',
@@ -256,7 +279,7 @@ class ProcessorDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${UnitConversion.formatTemperature(m.temperature)}°C · '
-                      '${UnitConversion.formatInt(m.humidityAir)}% · '
+                      '${UnitConversion.formatHumidity(m.humidityInt)}% · '
                       '${UnitConversion.formatInt(m.luminosity)} lux',
                       style: AppTypography.metricSmall.copyWith(
                         color: AppColors.cream,
@@ -266,7 +289,7 @@ class ProcessorDetailScreen extends ConsumerWidget {
                 ),
               ),
               if (m.error != null && m.error!.isNotEmpty)
-                Icon(
+                const Icon(
                   PhosphorIconsBold.warning,
                   size: 20,
                   color: AppColors.tomatoRed,

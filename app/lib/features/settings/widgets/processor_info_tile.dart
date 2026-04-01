@@ -9,11 +9,15 @@ import '../../../shared/widgets/status_dot.dart';
 class ProcessorInfoTile extends StatelessWidget {
   final ProcessorInfo processor;
   final VoidCallback? onTap;
+  final VoidCallback? onRename;
+  final VoidCallback? onEditLocation;
 
   const ProcessorInfoTile({
     super.key,
     required this.processor,
     this.onTap,
+    this.onRename,
+    this.onEditLocation,
   });
 
   @override
@@ -33,20 +37,46 @@ class ProcessorInfoTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
+                const Icon(
                   PhosphorIconsBold.cpu,
                   size: 24,
                   color: AppColors.leafGreenLight,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: Text(
-                    processor.displayName,
-                    style: AppTypography.titleLarge.copyWith(
-                      color: AppColors.cream,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        processor.displayName,
+                        style: AppTypography.titleLarge.copyWith(
+                          color: AppColors.cream,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (!processor.hasName)
+                        Text(
+                          'No name set',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.clay,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
+                if (onRename != null)
+                  IconButton(
+                    onPressed: onRename,
+                    icon: const Icon(
+                      PhosphorIconsBold.pencilSimple,
+                      size: 18,
+                      color: AppColors.leafGreenLight,
+                    ),
+                    tooltip: 'Rename',
+                    visualDensity: VisualDensity.compact,
+                  ),
+                const SizedBox(width: AppSpacing.xs),
                 const StatusDot(status: 'healthy'),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
@@ -58,36 +88,56 @@ class ProcessorInfoTile extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-            if (processor.latitude != null && processor.longitude != null)
-              Row(
-                children: [
-                  Icon(
-                    PhosphorIconsBold.mapPin,
-                    size: 16,
-                    color: AppColors.clay,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    '${processor.latitude}° N, ${processor.longitude}° E',
+            Row(
+              children: [
+                const Icon(
+                  PhosphorIconsBold.mapPin,
+                  size: 16,
+                  color: AppColors.clay,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    (processor.latitude != null && processor.longitude != null)
+                        ? '${processor.latitude}° N, ${processor.longitude}° E'
+                        : 'No location set',
                     style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.clay,
+                      fontStyle:
+                          (processor.latitude == null) ? FontStyle.italic : null,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
+                ),
+                if (onEditLocation != null)
+                  IconButton(
+                    onPressed: onEditLocation,
+                    icon: const Icon(
+                      PhosphorIconsBold.mapPinPlus,
+                      size: 18,
+                      color: AppColors.leafGreenLight,
+                    ),
+                    tooltip: 'Edit location',
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(
+                const Icon(
                   PhosphorIconsBold.dropHalf,
                   size: 16,
                   color: AppColors.water,
                 ),
                 const SizedBox(width: AppSpacing.xs),
-                Text(
-                  '${processor.wateringVolume ?? "—"} mL / watering · ${processor.cultivationSize ?? "—"} plants',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.water,
+                Expanded(
+                  child: Text(
+                    '${processor.wateringVolume ?? "—"} mL / watering · ${processor.cultivationSize ?? "—"} plants',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.water,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

@@ -12,10 +12,11 @@ class TomatoStatus {
   });
 
   factory TomatoStatus.fromJson(Map<String, dynamic> json) {
+    final ripeRaw = json['ripe_tomatos'] ?? json['ripe_tomtatos'];
     return TomatoStatus(
       date: DateTime.parse(json['date'] as String),
       procId: json['proc_id'] as String,
-      ripeTomatos: (json['ripe_tomatos'] as num?)?.toInt(),
+      ripeTomatos: (ripeRaw as num?)?.toInt(),
       imgSupabaseUrl: json['img_supabase_url'] as String?,
     );
   }

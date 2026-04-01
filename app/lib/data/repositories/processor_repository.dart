@@ -33,4 +33,29 @@ class ProcessorRepository {
       throw AppException('Failed to fetch processor: $e');
     }
   }
+
+  Future<void> updateName(String procId, String name) async {
+    try {
+      await _client
+          .from(SupabaseTables.procInfo)
+          .update({'name': name})
+          .eq('proc_id', procId);
+    } catch (e) {
+      debugPrint('ProcessorRepository.updateName error: $e');
+      throw AppException('Failed to update processor name: $e');
+    }
+  }
+
+  Future<void> updateCoordinates(
+      String procId, String latitude, String longitude) async {
+    try {
+      await _client.from(SupabaseTables.procInfo).update({
+        'latitude': latitude,
+        'longitude': longitude,
+      }).eq('proc_id', procId);
+    } catch (e) {
+      debugPrint('ProcessorRepository.updateCoordinates error: $e');
+      throw AppException('Failed to update coordinates: $e');
+    }
+  }
 }

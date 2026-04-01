@@ -37,7 +37,7 @@ class CameraScreen extends ConsumerWidget {
               child: photosAsync.when(
                 data: (photos) {
                   if (photos.isEmpty) {
-                    return EmptyState(
+                    return const EmptyState(
                       icon: PhosphorIconsBold.camera,
                       title: 'No photos yet',
                       subtitle:

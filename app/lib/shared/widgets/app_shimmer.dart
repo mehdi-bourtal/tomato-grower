@@ -47,13 +47,13 @@ class AppShimmerCard extends StatelessWidget {
         border: Border.all(color: AppColors.soil600),
       ),
       padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppShimmer(height: 16, width: 100, borderRadius: AppRadius.sm),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
           AppShimmer(height: 28, width: 80, borderRadius: AppRadius.sm),
-          const Spacer(),
+          Spacer(),
           AppShimmer(height: 32, borderRadius: AppRadius.sm),
         ],
       ),

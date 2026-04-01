@@ -12,6 +12,9 @@ import 'providers/dashboard_provider.dart';
 import 'widgets/hero_status_card.dart';
 import 'widgets/metric_grid.dart';
 import 'widgets/recent_photos_row.dart';
+import 'widgets/ripe_alert_card.dart';
+import 'widgets/watering_timeline.dart';
+import 'widgets/weather_card.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -91,6 +94,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
               SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xxl,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: _buildRipeAlert(procId),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xxl,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: _buildWeather(procId),
+                ),
+              ),
+              SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
                 sliver: SliverToBoxAdapter(
                   child: Row(
@@ -104,7 +123,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       IconButton(
                         onPressed: _refresh,
-                        icon: Icon(
+                        icon: const Icon(
                           PhosphorIconsBold.arrowClockwise,
                           color: AppColors.leafGreenLight,
                         ),
@@ -119,6 +138,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   vertical: AppSpacing.lg,
                 ),
                 sliver: SliverToBoxAdapter(child: _buildMetricGrid(procId)),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xxl,
+                  vertical: AppSpacing.lg,
+                ),
+                sliver: SliverToBoxAdapter(child: _buildWateringTimeline(procId)),
               ),
               SliverPadding(
                 padding: const EdgeInsets.only(
@@ -143,7 +169,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               SliverFillRemaining(
                 child: processorsAsync.when(
                   data: (procs) => procs.isEmpty
-                      ? EmptyState(
+                      ? const EmptyState(
                           icon: PhosphorIconsBold.cpu,
                           title: 'No processors found',
                           subtitle:
@@ -195,6 +221,52 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  Widget _buildRipeAlert(String procId) {
+    final tomatoAsync = ref.watch(ripeAlertTomatoStatusProvider(procId));
+
+    return tomatoAsync.when(
+      data: (status) {
+        if (status == null || (status.ripeTomatos ?? 0) <= 0) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: RipeAlertCard(
+            tomatoStatus: status,
+            onViewPhoto: () => context.go('/camera'),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildWeather(String procId) {
+    final weatherAsync = ref.watch(weatherProvider(procId));
+    final celsius = ref.watch(temperatureUnitProvider);
+
+    return weatherAsync.when(
+      data: (weather) {
+        if (weather == null) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: WeatherCard(weather: weather, celsius: celsius),
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.only(bottom: AppSpacing.lg),
+        child: SizedBox(
+          height: 60,
+          child: Center(
+            child: CircularProgressIndicator(color: AppColors.sunYellow),
+          ),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
   Widget _buildMetricGrid(String procId) {
     final metricsAsync = ref.watch(latestMetricsProvider(procId));
     final sparkAsync = ref.watch(sparklineDataProvider(procId));
@@ -207,6 +279,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       metrics: metrics,
       sparklineData: sparkline,
       celsius: celsius,
+    );
+  }
+
+  Widget _buildWateringTimeline(String procId) {
+    final wateringsAsync = ref.watch(recentWateringsProvider(procId));
+    final processor = ref.watch(selectedProcessorProvider);
+
+    return wateringsAsync.when(
+      data: (waterings) => WateringTimeline(
+        waterings: waterings,
+        volumePerWatering: processor?.wateringVolume,
+      ),
+      loading: () => const SizedBox(
+        height: 80,
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.water),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
@@ -284,7 +375,7 @@ class _ProcessorChip extends StatelessWidget {
                 const SizedBox(height: AppSpacing.lg),
                 ...procs.map(
                   (p) => ListTile(
-                    leading: Icon(
+                    leading: const Icon(
                       PhosphorIconsBold.cpu,
                       color: AppColors.leafGreenLight,
                     ),
@@ -317,7 +408,7 @@ class _ProcessorChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(PhosphorIconsBold.cpu, size: 14, color: AppColors.leafGreenLight),
+            const Icon(PhosphorIconsBold.cpu, size: 14, color: AppColors.leafGreenLight),
             const SizedBox(width: AppSpacing.xs),
             Text(
               processor?.displayName ?? '…',
