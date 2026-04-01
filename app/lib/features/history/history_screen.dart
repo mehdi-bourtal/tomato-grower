@@ -8,7 +8,6 @@ import '../../shared/widgets/empty_state.dart';
 import 'providers/history_provider.dart';
 import '../dashboard/providers/dashboard_provider.dart';
 import 'widgets/date_range_selector.dart';
-import 'widgets/harvest_bar_chart.dart';
 import 'widgets/metric_line_chart.dart';
 import 'widgets/raw_data_table.dart';
 import 'widgets/watering_chart.dart';
@@ -78,7 +77,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final historyAsync = ref.watch(historyDataProvider);
-    final harvestAsync = ref.watch(harvestDataProvider);
     final selectedMetrics = ref.watch(selectedMetricsProvider);
     final dateRange = ref.watch(dateRangeProvider);
     final rangeDuration = dateRange.end.difference(dateRange.start);
@@ -142,27 +140,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               ),
               error: (e, _) => SizedBox(
                 height: 240,
-                child: EmptyState(
-                  icon: Icons.error_outline,
-                  title: 'Error',
-                  subtitle: e.toString(),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            harvestAsync.when(
-              data: (data) => HarvestBarChart(
-                data: data,
-                rangeDuration: rangeDuration,
-              ),
-              loading: () => const SizedBox(
-                height: 160,
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.leafGreen),
-                ),
-              ),
-              error: (e, _) => SizedBox(
-                height: 160,
                 child: EmptyState(
                   icon: Icons.error_outline,
                   title: 'Error',
