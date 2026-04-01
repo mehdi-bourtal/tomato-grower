@@ -1,4 +1,4 @@
-.env
+.local/
 __pycache__/
 *.pyc
-.modal/.env
+.modal/.local/
