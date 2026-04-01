@@ -14,13 +14,13 @@ String computeHealthStatus(CultureInfo? metrics) {
       anyWarning = true;
     }
   }
-  if (metrics.humidityAir != null) {
-    if (metrics.humidityAir! < 30 || metrics.humidityAir! > 90) {
+  if (metrics.humidityInt != null) {
+    if (metrics.humidityInt! < 30 || metrics.humidityInt! > 90) {
       anyWarning = true;
     }
   }
-  if (metrics.humidityGround != null) {
-    if (metrics.humidityGround! < 20 || metrics.humidityGround! > 80) {
+  if (metrics.humidityExt != null) {
+    if (metrics.humidityExt! < 20 || metrics.humidityExt! > 80) {
       anyWarning = true;
     }
   }

@@ -35,5 +35,7 @@ class ProcessorInfo {
         'cultivation_size': cultivationSize,
       };
 
-  String get displayName => name ?? 'Unnamed Processor';
+  String get displayName => (name != null && name!.isNotEmpty) ? name! : procId;
+
+  bool get hasName => name != null && name!.isNotEmpty;
 }

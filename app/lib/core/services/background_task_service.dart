@@ -79,24 +79,51 @@ Future<void> _checkRipeTomatoes() async {
 }
 
 class BackgroundTaskService {
+  /// Registers background work. Periodic scheduling is only supported on Android
+  /// by `workmanager` 0.5.x; iOS uses BGTaskScheduler and does not implement
+  /// `registerPeriodicTask` (would throw and white-screen the app).
   static Future<void> registerPeriodicTask() async {
-    await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+    try {
+      await Workmanager().initialize(
+        callbackDispatcher,
+        isInDebugMode: kDebugMode,
+      );
+    } catch (e, st) {
+      debugPrint('Workmanager.initialize failed: $e\n$st');
+      return;
+    }
 
-    await Workmanager().registerPeriodicTask(
-      kRipeTomatoCheckTask,
-      kRipeTomatoCheckTask,
-      frequency: const Duration(hours: 24),
-      constraints: Constraints(
-        networkType: NetworkType.connected,
-      ),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
-      backoffPolicy: BackoffPolicy.exponential,
-      backoffPolicyDelay: const Duration(minutes: 15),
-    );
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      debugPrint(
+        'Background ripe-tomato checks: periodic WorkManager is Android-only '
+        'in this build; iOS needs BGTaskScheduler setup in AppDelegate.',
+      );
+      return;
+    }
+
+    try {
+      await Workmanager().registerPeriodicTask(
+        kRipeTomatoCheckTask,
+        kRipeTomatoCheckTask,
+        frequency: const Duration(hours: 24),
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+        ),
+        existingWorkPolicy: ExistingWorkPolicy.keep,
+        backoffPolicy: BackoffPolicy.exponential,
+        backoffPolicyDelay: const Duration(minutes: 15),
+      );
+    } catch (e, st) {
+      debugPrint('Workmanager.registerPeriodicTask failed: $e\n$st');
+    }
   }
 
   static Future<void> cancelAll() async {
-    await Workmanager().cancelAll();
+    try {
+      await Workmanager().cancelAll();
+    } catch (e, st) {
+      debugPrint('Workmanager.cancelAll failed: $e\n$st');
+    }
   }
 
   static Future<void> setNotificationsEnabled(bool enabled) async {

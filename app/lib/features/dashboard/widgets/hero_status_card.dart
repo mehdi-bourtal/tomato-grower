@@ -73,17 +73,18 @@ class HeroStatusCard extends StatelessWidget {
             style: AppTypography.bodyMedium.copyWith(color: AppColors.parchment),
           ),
           const SizedBox(height: AppSpacing.xl),
-          Row(
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.sm,
             children: [
               FilledButton.icon(
                 onPressed: onWaterNow,
-                icon: Icon(PhosphorIconsBold.dropHalf, size: 18),
+                icon: const Icon(PhosphorIconsBold.dropHalf, size: 18),
                 label: const Text('Water Now'),
               ),
-              const SizedBox(width: AppSpacing.md),
               OutlinedButton.icon(
                 onPressed: onViewPhoto,
-                icon: Icon(PhosphorIconsBold.camera, size: 18),
+                icon: const Icon(PhosphorIconsBold.camera, size: 18),
                 label: const Text('View Photo'),
               ),
             ],

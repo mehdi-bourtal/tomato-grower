@@ -62,10 +62,10 @@ class _RawDataTableState extends State<RawDataTable> {
                 columns: [
                   _col('Date'),
                   _col('Temp'),
-                  _col('Air H.'),
-                  _col('Ground H.'),
+                  _col('Int. H.'),
+                  _col('Ext. H.'),
                   _col('Lux'),
-                  _col('Pa'),
+                  _col('hPa'),
                 ],
                 rows: widget.data.take(50).toList().asMap().entries.map((e) {
                   final d = e.value;
@@ -77,8 +77,8 @@ class _RawDataTableState extends State<RawDataTable> {
                     cells: [
                       _cell(AppDateUtils.formatTimestamp(d.date)),
                       _cell(UnitConversion.formatTemperature(d.temperature)),
-                      _cell(UnitConversion.formatInt(d.humidityAir)),
-                      _cell(UnitConversion.formatInt(d.humidityGround)),
+                      _cell(UnitConversion.formatHumidity(d.humidityInt)),
+                      _cell(UnitConversion.formatHumidity(d.humidityExt)),
                       _cell(UnitConversion.formatInt(d.luminosity)),
                       _cell(UnitConversion.formatPressure(d.pressure)),
                     ],

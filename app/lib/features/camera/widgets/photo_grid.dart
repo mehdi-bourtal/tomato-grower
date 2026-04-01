@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -8,7 +7,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../data/models/tomato_status.dart';
 import '../../../data/repositories/tomato_repository.dart';
-import '../../../shared/widgets/app_shimmer.dart';
+import '../../../shared/widgets/supabase_image.dart';
 
 class PhotoGrid extends StatelessWidget {
   final List<TomatoStatus> photos;
@@ -35,7 +34,6 @@ class PhotoGrid extends StatelessWidget {
       itemCount: photos.length,
       itemBuilder: (context, index) {
         final photo = photos[index];
-        final url = tomatoRepo.getPublicImageUrl(photo.imgSupabaseUrl);
 
         return GestureDetector(
           onTap: () => onPhotoTap(index),
@@ -54,31 +52,11 @@ class PhotoGrid extends StatelessWidget {
                   ),
                   child: AspectRatio(
                     aspectRatio: 16 / 10,
-                    child: url != null
-                        ? CachedNetworkImage(
-                            imageUrl: url,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) =>
-                                const AppShimmer(height: 120),
-                            errorWidget: (_, __, ___) => Container(
-                              color: AppColors.soil700,
-                              child: const Center(
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: AppColors.clay,
-                                ),
-                              ),
-                            ),
-                          )
-                        : Container(
-                            color: AppColors.soil700,
-                            child: const Center(
-                              child: Icon(
-                                Icons.image_not_supported_outlined,
-                                color: AppColors.clay,
-                              ),
-                            ),
-                          ),
+                    child: SupabaseImage(
+                      imagePath: photo.imgSupabaseUrl,
+                      tomatoRepo: tomatoRepo,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 Padding(
@@ -97,16 +75,19 @@ class PhotoGrid extends StatelessWidget {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             PhosphorIconsBold.orangeSlice,
                             size: 14,
                             color: AppColors.tomatoRed,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            '${photo.ripeTomatos ?? "—"} ripe',
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.cream,
+                          Expanded(
+                            child: Text(
+                              '${photo.ripeTomatos ?? "—"} ripe',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.cream,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

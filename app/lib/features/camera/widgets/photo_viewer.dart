@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/theme/app_colors.dart';
@@ -7,6 +6,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../data/models/tomato_status.dart';
 import '../../../data/repositories/tomato_repository.dart';
+import '../../../shared/widgets/supabase_image.dart';
 
 class PhotoViewer extends StatefulWidget {
   final List<TomatoStatus> photos;
@@ -58,32 +58,16 @@ class _PhotoViewerState extends State<PhotoViewer> {
             onPageChanged: (i) => setState(() => _currentIndex = i),
             itemBuilder: (context, index) {
               final photo = widget.photos[index];
-              final url = widget.tomatoRepo.getPublicImageUrl(photo.imgSupabaseUrl);
 
               return InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 4.0,
                 child: Center(
-                  child: url != null
-                      ? CachedNetworkImage(
-                          imageUrl: url,
-                          fit: BoxFit.contain,
-                          placeholder: (_, __) => const Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.leafGreen,
-                            ),
-                          ),
-                          errorWidget: (_, __, ___) => const Icon(
-                            Icons.broken_image,
-                            color: AppColors.clay,
-                            size: 64,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.image_not_supported,
-                          color: AppColors.clay,
-                          size: 64,
-                        ),
+                  child: SupabaseImage(
+                    imagePath: photo.imgSupabaseUrl,
+                    tomatoRepo: widget.tomatoRepo,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               );
             },
@@ -124,16 +108,19 @@ class _PhotoViewerState extends State<PhotoViewer> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         PhosphorIconsBold.orangeSlice,
                         size: 20,
                         color: AppColors.tomatoRed,
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        '${widget.photos[_currentIndex].ripeTomatos ?? "—"} ripe tomatoes detected',
-                        style: AppTypography.bodyLarge.copyWith(
-                          color: AppColors.cream,
+                      Expanded(
+                        child: Text(
+                          '${widget.photos[_currentIndex].ripeTomatos ?? "—"} ripe tomatoes detected',
+                          style: AppTypography.bodyLarge.copyWith(
+                            color: AppColors.cream,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

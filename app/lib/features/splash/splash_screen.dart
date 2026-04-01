@@ -30,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               PhosphorIconsBold.plant,
               size: 64,
               color: AppColors.leafGreenLight,

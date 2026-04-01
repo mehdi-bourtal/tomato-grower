@@ -28,7 +28,7 @@ class MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.soil800,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -48,12 +48,12 @@ class MetricCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 24, color: AppColors.leafGreenLight),
-              const SizedBox(width: AppSpacing.sm),
+              Icon(icon, size: 20, color: AppColors.leafGreenLight),
+              const SizedBox(width: AppSpacing.xs),
               Expanded(
                 child: Text(
                   title,
-                  style: AppTypography.titleMedium.copyWith(
+                  style: AppTypography.labelSmall.copyWith(
                     color: AppColors.cream,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -62,7 +62,7 @@ class MetricCard extends StatelessWidget {
               StatusDot(status: status),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             value ?? '—',
             style: AppTypography.metricValue.copyWith(color: AppColors.cream),
@@ -71,17 +71,17 @@ class MetricCard extends StatelessWidget {
             unit,
             style: AppTypography.metricUnit.copyWith(color: AppColors.clay),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const Spacer(),
           if (sparklineData != null && sparklineData!.length >= 2)
             SizedBox(
-              height: 32,
+              height: 28,
               child: _Sparkline(
                 data: sparklineData!,
                 color: metricColor,
               ),
             )
           else
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
         ],
       ),
     );
@@ -137,7 +137,7 @@ class ErrorMetricCard extends StatelessWidget {
     final hasError = errorText != null && errorText!.isNotEmpty;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.soil800,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -152,14 +152,14 @@ class ErrorMetricCard extends StatelessWidget {
             children: [
               Icon(
                 hasError ? Icons.error_outline : Icons.check_circle_outline,
-                size: 24,
+                size: 20,
                 color: hasError ? AppColors.tomatoRed : AppColors.leafGreen,
               ),
-              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: AppSpacing.xs),
               Expanded(
                 child: Text(
                   'Status',
-                  style: AppTypography.titleMedium.copyWith(
+                  style: AppTypography.labelSmall.copyWith(
                     color: AppColors.cream,
                   ),
                 ),
@@ -167,15 +167,17 @@ class ErrorMetricCard extends StatelessWidget {
               StatusDot(status: hasError ? 'critical' : 'healthy'),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           if (hasError)
-            Text(
-              errorText!,
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.tomatoRed,
+            Expanded(
+              child: Text(
+                errorText!,
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.tomatoRed,
+                ),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             )
           else
             Text(
@@ -184,8 +186,7 @@ class ErrorMetricCard extends StatelessWidget {
                 color: AppColors.leafGreen,
               ),
             ),
-          const Spacer(),
-          const SizedBox(height: 32),
+          if (!hasError) const Spacer(),
         ],
       ),
     );

@@ -6,10 +6,12 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../shared/widgets/empty_state.dart';
 import 'providers/history_provider.dart';
+import '../dashboard/providers/dashboard_provider.dart';
 import 'widgets/date_range_selector.dart';
 import 'widgets/harvest_bar_chart.dart';
 import 'widgets/metric_line_chart.dart';
 import 'widgets/raw_data_table.dart';
+import 'widgets/watering_chart.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
@@ -23,8 +25,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   static final _metricLabels = {
     'temperature': ('Temperature', PhosphorIconsBold.thermometerSimple, AppColors.tomatoOrange),
-    'humidity_air': ('Air Humidity', PhosphorIconsBold.drop, AppColors.water),
-    'humidity_ground': ('Ground Humid.', PhosphorIconsBold.plant, AppColors.leafGreen),
+    'humidity_int': ('Interior Humid.', PhosphorIconsBold.drop, AppColors.water),
+    'humidity_ext': ('Exterior Humid.', PhosphorIconsBold.cloudRain, AppColors.leafGreen),
     'luminosity': ('Luminosity', PhosphorIconsBold.sun, AppColors.sunYellow),
     'pressure': ('Pressure', PhosphorIconsBold.gauge, AppColors.clay),
   };
@@ -103,11 +105,35 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             _buildMetricToggleRow(selectedMetrics),
             const SizedBox(height: AppSpacing.xl),
             historyAsync.when(
-              data: (data) => MetricLineChart(
-                data: data,
-                selectedMetrics: selectedMetrics,
-                rangeDuration: rangeDuration,
-              ),
+              data: (data) {
+                final sortedMetrics = selectedMetrics.toList()
+                  ..sort((a, b) {
+                    final keys = _metricLabels.keys.toList();
+                    return keys.indexOf(a).compareTo(keys.indexOf(b));
+                  });
+
+                if (sortedMetrics.isEmpty) {
+                  return const SizedBox(
+                    height: 200,
+                    child: EmptyState(
+                      icon: Icons.show_chart,
+                      title: 'No metrics selected',
+                      subtitle: 'Select at least one metric above to display charts.',
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: sortedMetrics.map((metric) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                    child: MetricLineChart(
+                      data: data,
+                      metricKey: metric,
+                      rangeDuration: rangeDuration,
+                    ),
+                  )).toList(),
+                );
+              },
               loading: () => const SizedBox(
                 height: 240,
                 child: Center(
@@ -123,7 +149,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.sm),
             harvestAsync.when(
               data: (data) => HarvestBarChart(
                 data: data,
@@ -144,6 +170,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: AppSpacing.lg),
+            _buildWateringSection(),
             const SizedBox(height: AppSpacing.xl),
             historyAsync.when(
               data: (data) => RawDataTable(data: data),
@@ -152,6 +180,35 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             ),
             const SizedBox(height: 80),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWateringSection() {
+    final wateringAsync = ref.watch(wateringHistoryProvider);
+    final processor = ref.watch(selectedProcessorProvider);
+    final dateRange = ref.watch(dateRangeProvider);
+    final rangeDuration = dateRange.end.difference(dateRange.start);
+
+    return wateringAsync.when(
+      data: (data) => WateringChart(
+        data: data,
+        volumePerWatering: processor?.wateringVolume,
+        rangeDuration: rangeDuration,
+      ),
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.water),
+        ),
+      ),
+      error: (e, _) => SizedBox(
+        height: 200,
+        child: EmptyState(
+          icon: Icons.error_outline,
+          title: 'Error',
+          subtitle: e.toString(),
         ),
       ),
     );

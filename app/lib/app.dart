@@ -131,6 +131,24 @@ class _MainShellState extends ConsumerState<MainShell> {
 
     return Scaffold(
       body: widget.child,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          _refreshManager?.triggerRefresh();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Actualisation des donnees...')),
+          );
+        },
+        icon: Icon(
+          PhosphorIconsBold.arrowClockwise,
+          color: AppColors.soil900,
+        ),
+        label: Text(
+          'Actualiser',
+          style: AppTypography.labelLarge.copyWith(color: AppColors.soil900),
+        ),
+        backgroundColor: AppColors.leafGreen,
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: AppColors.soil800,
