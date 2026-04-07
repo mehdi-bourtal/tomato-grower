@@ -82,7 +82,7 @@ def save_to_supabase(data: dict, headers: dict, supabase_url: str):
     # Si proc_id absent, on crée une ligne vide pour générer un UUID
     if not data.get("proc_id"):
         resp = requests.post(
-            f"{supabase_url}/rest/v1/sensor_data",
+            f"{supabase_url}/rest/v1/culture_info",
             headers={**headers, "Prefer": "return=representation"},
             json={},
         )
@@ -91,7 +91,7 @@ def save_to_supabase(data: dict, headers: dict, supabase_url: str):
 
     data["created_at"] = datetime.now(timezone.utc).isoformat()
     requests.post(
-        f"{supabase_url}/rest/v1/sensor_data",
+        f"{supabase_url}/rest/v1/culture_info",
         headers={**headers, "Prefer": "return=minimal"},
         json=data,
     )
@@ -101,7 +101,7 @@ def fetch_historical_data(headers: dict, supabase_url: str) -> list:
     import requests
     since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     resp = requests.get(
-        f"{supabase_url}/rest/v1/sensor_data?created_at=gte.{since}&order=created_at.desc",
+        f"{supabase_url}/rest/v1/culture_info?created_at=gte.{since}&order=created_at.desc",
         headers=headers,
     )
     return resp.json()
@@ -111,7 +111,7 @@ def fetch_location(proc_id: str, headers: dict, supabase_url: str) -> tuple:
     import requests
 
     resp = requests.get(
-        f"{supabase_url}/rest/v1/proc_infos?proc_id=eq.{proc_id}&limit=1",
+        f"{supabase_url}/rest/v1/proc_info?proc_id=eq.{proc_id}&limit=1",
         headers=headers,
     )
     data = resp.json()
