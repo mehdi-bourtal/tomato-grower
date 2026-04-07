@@ -10,7 +10,7 @@ Déploiement :
 
 Variables requises dans le secret Modal "my-secrets" :
     SUPABASE_URL          – URL REST Supabase  (ex: https://xxx.supabase.co)
-    SUPABASE_SERVICE_KEY  – clé service Supabase (rôle service_role)
+    SUPABASE_KEY  – clé service Supabase (rôle service_role)
     SUPABASE_BUCKET       – nom du bucket Storage  (ex: tomato_plantations)
 
 Appel HTTP depuis l'ESP32 (multipart/form-data) :
@@ -278,14 +278,14 @@ async def detect_ripe_tomatoes(
     """
     # --- Récupération des credentials depuis les secrets Modal ---
     supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+    supabase_key = os.getenv("SUPABASE_KEY")
     bucket       = os.getenv("SUPABASE_BUCKET")
 
     if not supabase_url or not supabase_key or not bucket:
         return _error(
             ERR_INTERNAL,
             "Secret(s) manquant(s) : vérifier SUPABASE_URL, "
-            "SUPABASE_SERVICE_KEY et SUPABASE_BUCKET dans 'my-secrets'.",
+            "SUPABASE_KEY et SUPABASE_BUCKET dans 'my-secrets'.",
             status=500,
         )
 
