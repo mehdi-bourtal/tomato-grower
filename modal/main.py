@@ -1,7 +1,10 @@
-# app.py
-import modal
-from datetime import datetime, timedelta, timezone
+# main.py
 import os
+import time
+import json
+from datetime import datetime, timedelta, timezone
+
+import modal
 
 app = modal.App("tomato-grower-app")
 
@@ -40,6 +43,8 @@ Based on all this data, provide a detailed action plan in JSON format with the f
     "action_plan": "detailed recommendations",
     "alerts": ["list of urgent alerts if any"]
 }}
+
+Return ONLY valid JSON.
 """
 
 
@@ -47,6 +52,7 @@ def fetch_weather(lat: float, lon: float) -> dict:
     import requests
 
     openweather_key = os.environ["OPENWEATHER_API_KEY"]
+
     resp = requests.get(
         "https://api.openweathermap.org/data/2.5/weather",
         params={
@@ -79,7 +85,7 @@ def save_to_supabase(data: dict, headers: dict, supabase_url: str) -> dict:
 
     payload = data.copy()
 
-    # Si proc_id absent, on crée une ligne dans proc_info pour générer/initialiser l'appareil
+    # Si proc_id absent, on crée une ligne dans proc_info
     if not payload.get("proc_id"):
         resp = requests.post(
             f"{supabase_url}/rest/v1/proc_info",
@@ -138,13 +144,15 @@ def fetch_location(proc_id: str, headers: dict, supabase_url: str):
     resp.raise_for_status()
     data = resp.json()
 
+    # Si pas trouvé, on crée une ligne vide avec ce proc_id
     if not data:
-        requests.post(
+        create_resp = requests.post(
             f"{supabase_url}/rest/v1/proc_info",
             headers={**headers, "Prefer": "return=minimal"},
             json={"proc_id": proc_id},
             timeout=20,
-        ).raise_for_status()
+        )
+        create_resp.raise_for_status()
         return None, None
 
     lat = data[0].get("latitude")
@@ -158,33 +166,58 @@ def fetch_location(proc_id: str, headers: dict, supabase_url: str):
 
 def call_gemini(prompt: str, gemini_key: str) -> dict:
     import requests
-    import json
 
-    response = requests.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
-        headers={"Content-Type": "application/json"},
-        json={
-            "contents": [{"parts": [{"text": prompt}]}],
-        },
-        timeout=30,
-    )
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
-    response.raise_for_status()
-    gemini_data = response.json()
+    # petits retries si Gemini répond 429
+    for delay in [0, 2, 5]:
+        if delay:
+            time.sleep(delay)
 
-    if "candidates" not in gemini_data:
-        return {
-            "error": "Gemini response missing 'candidates'",
-            "gemini_raw": gemini_data,
-        }
+        response = requests.post(
+            f"{url}?key={gemini_key}",
+            headers={"Content-Type": "application/json"},
+            json={
+                "contents": [{"parts": [{"text": prompt}]}],
+            },
+            timeout=30,
+        )
 
-    raw_answer = gemini_data["candidates"][0]["content"]["parts"][0]["text"]
+        if response.status_code == 429:
+            continue
 
-    try:
-        cleaned = raw_answer.strip().removeprefix("```json").removesuffix("```").strip()
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        return {"raw": raw_answer}
+        response.raise_for_status()
+        gemini_data = response.json()
+
+        if "candidates" not in gemini_data:
+            return {
+                "error": "Gemini response missing candidates",
+                "gemini_raw": gemini_data,
+            }
+
+        try:
+            raw_answer = gemini_data["candidates"][0]["content"]["parts"][0]["text"]
+        except (KeyError, IndexError, TypeError):
+            return {
+                "error": "Unable to read Gemini response",
+                "gemini_raw": gemini_data,
+            }
+
+        try:
+            cleaned = raw_answer.strip()
+            if cleaned.startswith("```json"):
+                cleaned = cleaned[len("```json"):].strip()
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3].strip()
+
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            return {"raw": raw_answer}
+
+    return {
+        "error": "Gemini rate limit exceeded after retries",
+        "status_code": 429,
+    }
 
 
 @app.function(
@@ -193,27 +226,25 @@ def call_gemini(prompt: str, gemini_key: str) -> dict:
 )
 @modal.fastapi_endpoint(method="POST")
 def run_pipeline(payload: dict) -> dict:
-    import json
-
-    supabase_url = os.environ["SUPABASE_URL"]
-    supabase_key = os.environ["SUPABASE_KEY"]
-    gemini_key = os.environ["GEMINI_API_KEY"]
-
-    supabase_headers = {
-        "apikey": supabase_key,
-        "Authorization": f"Bearer {supabase_key}",
-        "Content-Type": "application/json",
-    }
-
     try:
-        # 1. Sauvegarde et récupère le payload final avec proc_id garanti
+        supabase_url = os.environ["SUPABASE_URL"]
+        supabase_key = os.environ["SUPABASE_KEY"]
+        gemini_key = os.environ["GEMINI_API_KEY"]
+
+        supabase_headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json",
+        }
+
+        # 1. Sauvegarde et récupération du payload final
         saved_payload = save_to_supabase(payload, supabase_headers, supabase_url)
         proc_id = saved_payload["proc_id"]
 
         # 2. Coordonnées GPS
         lat, lon = fetch_location(proc_id, supabase_headers, supabase_url)
 
-        # 3. Historique 24h pour CE proc_id
+        # 3. Historique 24h pour ce proc_id
         historical_data = fetch_historical_data(proc_id, supabase_headers, supabase_url)
         ripeness_prediction = predict_ripeness(saved_payload, historical_data)
 
@@ -229,7 +260,7 @@ def run_pipeline(payload: dict) -> dict:
                 "description": "No location available yet",
             }
 
-        # 5. Prompt + appel Gemini
+        # 5. Prompt
         prompt = DEFAULT_PROMPT.format(
             temperature=saved_payload.get("temperature"),
             humidity_int=saved_payload.get("humidity_int"),
@@ -244,6 +275,7 @@ def run_pipeline(payload: dict) -> dict:
             ripeness_prediction=ripeness_prediction,
         )
 
+        # 6. Appel Gemini
         answer = call_gemini(prompt, gemini_key)
 
         return {
@@ -252,4 +284,7 @@ def run_pipeline(payload: dict) -> dict:
         }
 
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "error": str(e),
+            "error_type": type(e).__name__,
+        }
