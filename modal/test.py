@@ -83,5 +83,4 @@ def test_detector_endpoint_with_image() -> None:
 
 
 if __name__ == "__main__":
-    test_pipeline_endpoint()
     test_detector_endpoint_with_image()

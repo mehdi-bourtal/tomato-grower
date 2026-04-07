@@ -24,7 +24,18 @@ Appel HTTP depuis l'ESP32 (multipart/form-data) :
 import modal
 import os
 from datetime import datetime, timezone
-from typing import Any
+
+# Import robuste: évite un crash local "No module named fastapi" au moment
+# du parsing du module pendant `modal deploy`. Dans le runtime Modal, fastapi
+# est bien installé via l'image Docker et ces objets seront correctement résolus.
+try:
+    from fastapi import File, Form
+except Exception:
+    def Form(default=...):  # type: ignore
+        return default
+
+    def File(default=...):  # type: ignore
+        return default
 
 # ---------------------------------------------------------------------------
 # Image Docker – dépendances Python installées au build
@@ -244,7 +255,10 @@ def insert_tomato_status(
     timeout=120,   # généreux pour l'upload + analyse
 )
 @modal.fastapi_endpoint(method="POST")
-async def detect_ripe_tomatoes(request: Any) -> dict:
+async def detect_ripe_tomatoes(
+    proc_id: str = Form(...),
+    image: bytes = File(...),
+) -> dict:
     """
     Endpoint POST multipart/form-data.
 
@@ -275,18 +289,8 @@ async def detect_ripe_tomatoes(request: Any) -> dict:
             status=500,
         )
 
-    # --- Lecture du multipart/form-data ---
-    try:
-        form = await request.form()
-    except Exception as exc:
-        return _error(
-            ERR_INTERNAL,
-            f"Impossible de parser le formulaire multipart : {exc}",
-            status=400,
-        )
-
     # Champ texte proc_id
-    proc_id = (form.get("proc_id") or "").strip()
+    proc_id = (proc_id or "").strip()
     if not proc_id:
         return _error(
             ERR_MISSING_PARAM,
@@ -294,21 +298,7 @@ async def detect_ripe_tomatoes(request: Any) -> dict:
         )
 
     # Fichier binaire image
-    image_field = form.get("image")
-    if image_field is None:
-        return _error(
-            ERR_MISSING_PARAM,
-            "Le champ 'image' (fichier JPEG) est requis dans le formulaire.",
-        )
-
-    try:
-        image_bytes = await image_field.read()
-    except Exception as exc:
-        return _error(
-            ERR_INTERNAL,
-            f"Impossible de lire le fichier image : {exc}",
-            status=400,
-        )
+    image_bytes = image
 
     if not image_bytes:
         return _error(ERR_EMPTY_IMAGE, "Le fichier image reçu est vide.")
