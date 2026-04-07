@@ -24,6 +24,7 @@ Appel HTTP depuis l'ESP32 (multipart/form-data) :
 import modal
 import os
 from datetime import datetime, timezone
+from fastapi import Request
 
 # ---------------------------------------------------------------------------
 # Image Docker – dépendances Python installées au build
@@ -243,7 +244,7 @@ def insert_tomato_status(
     timeout=120,   # généreux pour l'upload + analyse
 )
 @modal.fastapi_endpoint(method="POST")
-async def detect_ripe_tomatoes(request) -> dict:
+async def detect_ripe_tomatoes(request: Request) -> dict:
     """
     Endpoint POST multipart/form-data.
 
