@@ -19,3 +19,6 @@ void loop() {
   //Mantém o MQTT vivo e escutando as mensagens do servidor
   loop_mqtt();
 }
+
+
+// teste teste
