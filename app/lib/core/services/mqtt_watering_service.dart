@@ -12,10 +12,10 @@ import 'package:mqtt_client/mqtt_server_client.dart';
 /// Configure in `.env`:
 /// - `HIVEMQ_CLUSTER_URL` — broker hostname (or full URL; host is extracted)
 /// - `HIVEMQ_USERNAME`, `HIVEMQ_PASSWORD` — HiveMQ credentials
-/// - Optional `HIVEMQ_TOPIC_PREFIX` — defaults to `tomato_grower`
+/// - `HIVEMQ_TOPIC_PREFIX` — full MQTT topic used for publish
 ///
 /// Payload: UTF-8 JSON `{"proc_id":"…","volume":…}` on topic
-/// `{prefix}/{procId}/water`. [volumeMl] is mL from `proc_info.watering_volume`;
+/// `{HIVEMQ_TOPIC_PREFIX}`. [volumeMl] is mL from `proc_info.watering_volume`;
 /// JSON uses `"volume": null` when unknown.
 class MqttWateringService {
   MqttServerClient? _client;
@@ -51,16 +51,53 @@ class MqttWateringService {
   }
 
   String _topicForProc(String procId) {
-    final prefix = dotenv.env['HIVEMQ_TOPIC_PREFIX']?.trim();
-    final base =
-        (prefix != null && prefix.isNotEmpty) ? prefix : 'tomato_grower';
-    return '$base/$procId/water';
+    final topic = dotenv.env['HIVEMQ_TOPIC_PREFIX']?.trim();
+    if (topic == null || topic.isEmpty) {
+      throw StateError(
+        'HIVEMQ_TOPIC_PREFIX is missing in .env. '
+        'Set it to the exact topic your subscriber listens to.',
+      );
+    }
+    return topic;
   }
 
   bool _isConnected() {
     final c = _client;
     if (c == null) return false;
     return c.connectionStatus?.state == MqttConnectionState.connected;
+  }
+
+  Future<MqttServerClient> _buildClient({
+    required String server,
+    required String clientId,
+    required int port,
+    required bool useWebSocket,
+  }) async {
+    final client = MqttServerClient.withPort(server, clientId, port);
+    client.logging(on: kDebugMode);
+    client.keepAlivePeriod = 20; // HiveMQ example default
+    client.connectTimeoutPeriod = 15000;
+    client.socketTimeout = 15000;
+    client.autoReconnect = true;
+    // For native MQTT over TCP TLS => secure=true.
+    // For WebSocket secure (wss://...) => secure must stay false.
+    client.secure = !useWebSocket;
+    client.securityContext = SecurityContext.defaultContext;
+    client.useWebSocket = useWebSocket;
+    // Prefer the default websocket implementation for HiveMQ Cloud.
+    // The alternate implementation can throw unhandled socket errors on iOS.
+    client.useAlternateWebSocketImplementation = false;
+    client.onConnected = () {
+      debugPrint(
+        'MQTT connected (${useWebSocket ? 'wss' : 'tls'}) to $server:$port',
+      );
+    };
+    client.onDisconnected = () {
+      debugPrint(
+        'MQTT disconnected (${useWebSocket ? 'wss' : 'tls'}) from $server:$port',
+      );
+    };
+    return client;
   }
 
   Future<void> _connect() async {
@@ -82,24 +119,42 @@ class MqttWateringService {
 
     final clientId =
         'tomato_grower_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(1 << 20)}';
+    final wsPath = dotenv.env['HIVEMQ_WS_PATH']?.trim() ?? '/mqtt';
+    final wsPort = int.tryParse(dotenv.env['HIVEMQ_WS_PORT'] ?? '') ?? 443;
+    final wssServer = 'wss://$host${wsPath.startsWith('/') ? wsPath : '/$wsPath'}';
 
-    final client = MqttServerClient.withPort(host, clientId, 8883);
-    client.logging(on: kDebugMode);
-    client.keepAlivePeriod = 60;
-    client.connectTimeoutPeriod = 15000;
-    client.secure = true;
-    client.securityContext = SecurityContext.defaultContext;
-    client.autoReconnect = true;
-
-    final status = await client.connect(username, password);
-    if (status?.state != MqttConnectionState.connected) {
-      client.disconnect();
-      throw StateError(
-        'MQTT connection failed: ${status?.returnCode ?? status?.state}',
-      );
+    Object? lastError;
+    for (final attempt in <({String server, int port, bool ws})>[
+      (server: host, port: 8883, ws: false),
+      (server: wssServer, port: wsPort, ws: true),
+    ]) {
+      try {
+        final client = await _buildClient(
+          server: attempt.server,
+          clientId: '${clientId}_${attempt.ws ? 'wss' : 'tls'}',
+          port: attempt.port,
+          useWebSocket: attempt.ws,
+        );
+        debugPrint(
+          'MQTT attempting ${attempt.ws ? 'wss' : 'tls'} '
+          'to ${attempt.server}:${attempt.port}',
+        );
+        final status = await client.connect(username, password);
+        if (status?.state == MqttConnectionState.connected) {
+          _client = client;
+          return;
+        }
+        lastError = StateError(
+          'MQTT ${attempt.ws ? 'wss' : 'tls'} failed: '
+          '${status?.returnCode ?? status?.state}',
+        );
+        client.disconnect();
+      } catch (e) {
+        lastError = e;
+      }
     }
 
-    _client = client;
+    throw StateError('MQTT connection failed after TLS+WSS attempts: $lastError');
   }
 
   Future<void> _ensureConnected() async {
@@ -138,6 +193,9 @@ class MqttWateringService {
       'proc_id': procId,
       'volume': volumeMl,
     });
+    if (kDebugMode) {
+      debugPrint('MQTT publish topic=$topic payload=$payload');
+    }
     final builder = MqttClientPayloadBuilder()..addUTF8String(payload);
 
     final buf = builder.payload;

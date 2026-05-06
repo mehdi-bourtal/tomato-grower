@@ -60,4 +60,17 @@ class WateringRepository {
       throw AppException('Failed to fetch latest watering: $e');
     }
   }
+
+  Future<void> createWateringEvent(String procId, {DateTime? date}) async {
+    try {
+      final eventDate = (date ?? DateTime.now()).toUtc();
+      await _client.from(SupabaseTables.watering).insert({
+        'proc_id': procId,
+        'date': eventDate.toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('WateringRepository.createWateringEvent error: $e');
+      throw AppException('Failed to save watering event: $e');
+    }
+  }
 }

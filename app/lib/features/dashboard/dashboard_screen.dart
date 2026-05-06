@@ -332,6 +332,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Future<void> _sendWaterCommand(String procId) async {
     final mqtt = ref.read(mqttWateringServiceProvider);
+    final wateringRepo = ref.read(wateringRepositoryProvider);
     if (!mqtt.isConfigured) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -349,9 +350,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         procId,
         volumeMl: ref.read(selectedProcessorProvider)?.wateringVolume,
       );
+      await wateringRepo.createWateringEvent(procId);
+      ref.read(refreshTriggerProvider.notifier).update((s) => s + 1);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Water command sent (MQTT).')),
+        const SnackBar(
+          content: Text('Water command sent and watering event saved.'),
+        ),
       );
     } catch (e) {
       if (!mounted) return;

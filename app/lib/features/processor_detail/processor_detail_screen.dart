@@ -41,6 +41,7 @@ Future<void> _sendWaterCommand(
   int? volumeMl,
 }) async {
   final mqtt = ref.read(mqttWateringServiceProvider);
+  final wateringRepo = ref.read(wateringRepositoryProvider);
   if (!mqtt.isConfigured) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -54,9 +55,13 @@ Future<void> _sendWaterCommand(
   }
   try {
     await mqtt.publishWaterCommand(procId, volumeMl: volumeMl);
+    await wateringRepo.createWateringEvent(procId);
+    ref.invalidate(_recentWateringsProvider(procId));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Water command sent (MQTT).')),
+      const SnackBar(
+        content: Text('Water command sent and watering event saved.'),
+      ),
     );
   } catch (e) {
     if (!context.mounted) return;
