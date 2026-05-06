@@ -80,6 +80,7 @@ app/macos/Flutter/ephemeral/
 app/macos/Flutter/GeneratedPluginRegistrant.swift
 
 app/.env
+.cursor
 .cursor/
 # Miscellaneous
 *.class
